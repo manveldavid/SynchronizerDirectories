@@ -119,15 +119,66 @@ namespace CompareDir
         public string Path { get; private set; }
         public new string ToString() => Name;
     }
+    
+    public delegate void VoidFileByPath(JustFile file, string path);
+    public delegate void VoidDirByPath(Dir dir, Dir dependDir, bool recursive);
     internal class Program
     {
+        #region HelpFunctions
         public static List<Dir> BuildDirsClassFromPathList(List<string> listOfPath)
         {
             List<Dir> allDirs = new List<Dir>();
             foreach (string path in listOfPath) allDirs.Add(new Dir(path));
             return allDirs;
         }
-        static void CopyDirectoryWithFilesRecursively(Dir severalDir, Dir destinationDir, bool recursive)
+        
+        public static void ReplaceOrCopyFileByPath(JustFile file, string path)
+        {
+            if (File.Exists(path))
+            {
+                if (file.Info.IsReadOnly != true)
+                {
+                    File.Delete(path);
+                    file.Info.CopyTo(path);
+                }
+            }
+            else file.Info.CopyTo(path);
+        }
+        public static void DeleteFileByPath(JustFile file, string path)
+        {
+            if (file.Info.IsReadOnly != true)
+            {
+                File.Delete(path);
+            }
+        }
+        public static void PrintProblemFileByPath(JustFile file, string path)
+        {
+            Console.WriteLine(path);
+        }
+        public static void SyncFileActionDependKey(List<JustFile> problemFiles, List<Dir> AllDirs, ConsoleKey key)
+        {
+
+            foreach (var file in problemFiles)
+            {
+                string PathNew = file.Path;
+                VoidFileByPath NeedFileVoid = new VoidFileByPath(PrintProblemFileByPath);
+                
+                if (key == ConsoleKey.A)
+                {
+                    PathNew = AllDirs.Last().Path + "\\" + 
+                        file.Path.Substring(AllDirs.First().Path.Length);
+                    NeedFileVoid += new VoidFileByPath(ReplaceOrCopyFileByPath);
+                }
+                else if(key == ConsoleKey.R)
+                {
+                    NeedFileVoid += new VoidFileByPath(DeleteFileByPath);
+                }
+                
+                NeedFileVoid(file, PathNew);
+            }
+        }
+
+        public static void CopyDirectoryWithFilesRecursively(Dir severalDir, Dir destinationDir, bool recursive)
         {
             Dir rootDir = severalDir;
             while (rootDir.ParentDir != null) rootDir = rootDir.ParentDir;
@@ -140,13 +191,37 @@ namespace CompareDir
                     + somedir.Path.Substring(rootDir.Path.Length));
 
             foreach (JustFile file in severalDir.Files)
-                    file.Info.CopyTo(destinationDir.Path
-                    + severalDir.Path.Substring(rootDir.Path.Length) + "\\" + file.Name);
+                file.Info.CopyTo(destinationDir.Path
+                + severalDir.Path.Substring(rootDir.Path.Length) + "\\" + file.Name);
 
             if (recursive && severalDir.ChildDirs != null)
                 foreach (Dir child in severalDir.ChildDirs)
                     CopyDirectoryWithFilesRecursively(child, destinationDir, true);
         }
+        public static void DeleteDirByPathRecursive(Dir dir, Dir dependDir, bool recursive)
+        {
+            Directory.Delete(dir.Path, recursive);
+        }
+        public static void PrintProblemDirByPath(Dir dir, Dir dependDir, bool recursive)
+        {
+            Console.WriteLine(dir.Path);
+        }
+        public static void SyncDirActionDependKey(List<Dir> problemDirs, List<Dir> AllDirs, ConsoleKey key)
+        {
+            foreach (var dir in problemDirs)
+            {
+                VoidDirByPath NeedFileVoid = new VoidDirByPath(PrintProblemDirByPath);
+                bool recursive = true;
+
+                if (key == ConsoleKey.A)
+                    NeedFileVoid += new VoidDirByPath(CopyDirectoryWithFilesRecursively);
+                else if (key == ConsoleKey.R)
+                    NeedFileVoid += new VoidDirByPath(DeleteDirByPathRecursive);
+
+                NeedFileVoid(dir, AllDirs.Last(), recursive);
+            }
+        }
+        #endregion
 
         static void Main(string[] args)
         {
@@ -164,55 +239,14 @@ namespace CompareDir
             var problemFiles = Dir.CompareFilesInDirs(AllDirs.First(), AllDirs.Last());
             var problemDirs = Dir.CompareDirs(AllDirs.First(), AllDirs.Last());
 
-            foreach (var file in problemFiles)
-            {
-                Console.WriteLine(file.Path);
-            }
-
-            foreach (var dir in problemDirs)
-            {
-                Console.WriteLine(dir.Path);
-            }
+            SyncDirActionDependKey(problemDirs, AllDirs, ConsoleKey.Enter);
+            SyncFileActionDependKey(problemFiles, AllDirs, ConsoleKey.Enter);
+            
             Console.WriteLine("Sync? (press \"a\" to add | \"r\" to remove | other key to nothing)");
             ConsoleKey key = Console.ReadKey().Key;
-            if (key == ConsoleKey.A)
-            {
-                foreach (var file in problemFiles)
-                {
-                    Console.WriteLine(file.Path);
-                    string newFileName = AllDirs.Last().Path + "\\" + file.Path.Substring(AllDirs.First().Path.Length);
-                    if (File.Exists(newFileName))
-                    {
-                        if (file.Info.IsReadOnly != true)
-                        {
-                            File.Delete(newFileName);
-                            file.Info.CopyTo(newFileName);
-                        }
-                    }
-                    else file.Info.CopyTo(newFileName);
-                }
 
-                foreach (var dir in problemDirs)
-                {
-                    Console.WriteLine(dir.Path);
-                    CopyDirectoryWithFilesRecursively(dir, AllDirs.Last(), true);
-                }
-            }
-            else if (key == ConsoleKey.R)
-            {
-                foreach (var file in problemFiles)
-                    if (file.Info.IsReadOnly != true)
-                    {
-                        Console.WriteLine(file.Path);
-                        File.Delete(file.Path);
-                    }
-
-                foreach (var dir in problemDirs)
-                {
-                    Console.WriteLine(dir.Path);
-                    Directory.Delete(dir.Path,true);
-                }
-            }
+            SyncDirActionDependKey(problemDirs, AllDirs, key);
+            SyncFileActionDependKey(problemFiles, AllDirs, key);
 
             Console.WriteLine("The end");
 
