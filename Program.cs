@@ -2,43 +2,46 @@
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CompareDir
 {
-    
-    public delegate void VoidFileByPath(JustFile file, string path);
-    public delegate void VoidDirByPath(Dir dir, Dir dependDir, bool recursive);
     internal class Program
     {
-        
-
         static void Main(string[] args)
         {
-            List<string> listOfDir = new List<string>();
-            string tempPath = "";
-            do
+            string fileConf = File.ReadAllText("LinkedDirs.conf");
+            List<string> listOfDir = fileConf.Split('\n').ToList();
+            listOfDir = listOfDir.Select(i => i.Length > 0? i.Substring(0,i.Length-1) : i).ToList();
+            Dictionary<Dir, Dir> linkedDirs = new Dictionary<Dir, Dir>();
+
+            if (listOfDir.Count > 3 && listOfDir.Count % 3 == 0)
             {
-                tempPath = Console.ReadLine();
-                if (tempPath != "") listOfDir.Add(tempPath);
+                Dictionary<string, string> pathDirs = new Dictionary<string, string>();
+
+                for(int i = 0; i < listOfDir.Count;i++)
+                {
+                    if (listOfDir[i] == "")
+                    {
+                        pathDirs.Add(listOfDir[i-2], listOfDir[i-1]);
+                    }
+                }
+
+                foreach(var key in pathDirs.Keys)
+                {
+                    linkedDirs.Add(new Dir(key), new Dir(pathDirs[key]));
+                }
+
             }
-            while (tempPath != "");
 
-            List<Dir> AllDirs = ActionsOnDIrAndFiles.BuildDirsClassFromPathList(listOfDir);
-
-            var problemFiles = Dir.CompareFilesInDirs(AllDirs.First(), AllDirs.Last());
-            var problemDirs = Dir.CompareDirs(AllDirs.First(), AllDirs.Last());
-
-            ActionsOnDIrAndFiles.SyncDirActionDependKey(problemDirs, AllDirs, ConsoleKey.Enter);
-            ActionsOnDIrAndFiles.SyncFileActionDependKey(problemFiles, AllDirs, ConsoleKey.Enter);
+            if (linkedDirs.Count > 0)
+            {
+                foreach (var key in linkedDirs.Keys)
+                {
+                    ActionsOnDIrAndFiles.MainCompareAction(key, linkedDirs[key]);
+                    ActionsOnDIrAndFiles.MainCompareAction(linkedDirs[key], key);
+                }
+            }
             
-            Console.WriteLine("Sync? (press \"a\" to add | \"r\" to remove | other key to nothing)");
-            ConsoleKey key = Console.ReadKey().Key;
-
-            ActionsOnDIrAndFiles.SyncDirActionDependKey(problemDirs, AllDirs, key);
-            ActionsOnDIrAndFiles.SyncFileActionDependKey(problemFiles, AllDirs, key);
-
             Console.WriteLine("The end");
 
             Console.ReadKey();

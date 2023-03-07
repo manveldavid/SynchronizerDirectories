@@ -2,13 +2,33 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CompareDir
 {
+    public delegate void VoidFileByPath(JustFile file, string path);
+    public delegate void VoidDirByPath(Dir dir, Dir dependDir, bool recursive);
+
     internal class ActionsOnDIrAndFiles
     {
+        public static void MainCompareAction(Dir masterDir, Dir compareDir)
+        {
+            var problemFiles = Dir.CompareFilesInDirs(masterDir, compareDir);
+            var problemDirs = Dir.CompareDirs(masterDir, compareDir);
+
+            
+            if (problemDirs.Count > 0 || problemFiles.Count > 0)
+            {
+                ActionsOnDIrAndFiles.SyncDirActionDependKey(problemDirs, masterDir, compareDir, ConsoleKey.Enter);
+                ActionsOnDIrAndFiles.SyncFileActionDependKey(problemFiles, masterDir, compareDir, ConsoleKey.Enter);
+                Console.WriteLine("Sync? (press \"a\" to add | \"r\" to remove | {_other key_} to nothing)");
+                ConsoleKey key = Console.ReadKey().Key; Console.WriteLine("\n");
+                if (key == ConsoleKey.A || key == ConsoleKey.R)
+                {
+                    ActionsOnDIrAndFiles.SyncDirActionDependKey(problemDirs, masterDir, compareDir, key);
+                    ActionsOnDIrAndFiles.SyncFileActionDependKey(problemFiles, masterDir, compareDir, key);
+                }
+            }
+        }
         #region HelpFunctions
         public static List<Dir> BuildDirsClassFromPathList(List<string> listOfPath)
         {
@@ -40,7 +60,7 @@ namespace CompareDir
         {
             Console.WriteLine(path);
         }
-        public static void SyncFileActionDependKey(List<JustFile> problemFiles, List<Dir> AllDirs, ConsoleKey key)
+        public static void SyncFileActionDependKey(List<JustFile> problemFiles, Dir masterDir, Dir compareDir, ConsoleKey key)
         {
 
             foreach (var file in problemFiles)
@@ -50,8 +70,8 @@ namespace CompareDir
 
                 if (key == ConsoleKey.A)
                 {
-                    PathNew = AllDirs.Last().Path + "\\" +
-                        file.Path.Substring(AllDirs.First().Path.Length);
+                    PathNew = compareDir.Path + "\\" +
+                        file.Path.Substring(masterDir.Path.Length);
                     NeedFileVoid += new VoidFileByPath(ReplaceOrCopyFileByPath);
                 }
                 else if (key == ConsoleKey.R)
@@ -91,7 +111,7 @@ namespace CompareDir
         {
             Console.WriteLine(dir.Path);
         }
-        public static void SyncDirActionDependKey(List<Dir> problemDirs, List<Dir> AllDirs, ConsoleKey key)
+        public static void SyncDirActionDependKey(List<Dir> problemDirs, Dir masterDir, Dir compareDir, ConsoleKey key)
         {
             foreach (var dir in problemDirs)
             {
@@ -103,7 +123,7 @@ namespace CompareDir
                 else if (key == ConsoleKey.R)
                     NeedFileVoid += new VoidDirByPath(DeleteDirByPathRecursive);
 
-                NeedFileVoid(dir, AllDirs.Last(), recursive);
+                NeedFileVoid(dir, compareDir, recursive);
             }
         }
         #endregion

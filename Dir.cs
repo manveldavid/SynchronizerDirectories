@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CompareDir
 {
@@ -44,14 +41,14 @@ namespace CompareDir
             return problemDirs;
         }
 
-        public static List<JustFile> CompareFilesInDirs(Dir mainDir, Dir compareDir)
+        public static List<JustFile> CompareFilesInDirs(Dir masterDir, Dir compareDir)
         {
             List<JustFile> problemFiles = new List<JustFile>();
 
-            bool dirsExist = mainDir != null && compareDir != null;
+            bool dirsExist = masterDir != null && compareDir != null;
             if (dirsExist)
             {
-                foreach (var fileInMainDir in mainDir.Files)
+                foreach (var fileInMainDir in masterDir.Files)
                 {
                     if (!compareDir.Files.Select(o => o.Name).Contains(fileInMainDir.Name))
                         problemFiles.Add(fileInMainDir);
@@ -62,7 +59,7 @@ namespace CompareDir
                 }
 
                 if (compareDir.ChildDirs != null)
-                    foreach (Dir mainDirChild in mainDir.ChildDirs)
+                    foreach (Dir mainDirChild in masterDir.ChildDirs)
                     {
                         problemFiles.AddRange(CompareFilesInDirs(mainDirChild,
                                compareDir.ChildDirs.FirstOrDefault(x => x.Name == mainDirChild.Name)));
