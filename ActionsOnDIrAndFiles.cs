@@ -20,7 +20,7 @@ namespace CompareDir
             {
                 ActionsOnDIrAndFiles.SyncDirActionDependKey(problemDirs, masterDir, compareDir, ConsoleKey.Enter);
                 ActionsOnDIrAndFiles.SyncFileActionDependKey(problemFiles, masterDir, compareDir, ConsoleKey.Enter);
-                Console.WriteLine("Sync? (press \"a\" to add | \"r\" to remove | {_other key_} to nothing)");
+                Console.WriteLine("Sync? (press \"a\" to send | \"r\" to remove | {_other key_} to nothing)");
                 ConsoleKey key = Console.ReadKey().Key; Console.WriteLine("\n");
                 if (key == ConsoleKey.A || key == ConsoleKey.R)
                 {
