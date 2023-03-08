@@ -12,11 +12,10 @@ namespace CompareDir
             string fileConf = File.ReadAllText("LinkedDirs.conf");
             List<string> listOfDir = fileConf.Split('\n').ToList();
             listOfDir = listOfDir.Select(i => i.Length > 0? i.Substring(0,i.Length-1) : i).ToList();
-            Dictionary<Dir, Dir> linkedDirs = new Dictionary<Dir, Dir>();
+            Dictionary<string, string> pathDirs = new Dictionary<string, string>();
 
             if (listOfDir.Count > 3 && listOfDir.Count % 3 == 0)
             {
-                Dictionary<string, string> pathDirs = new Dictionary<string, string>();
 
                 for(int i = 0; i < listOfDir.Count;i++)
                 {
@@ -25,20 +24,14 @@ namespace CompareDir
                         pathDirs.Add(listOfDir[i-2], listOfDir[i-1]);
                     }
                 }
-
-                foreach(var key in pathDirs.Keys)
-                {
-                    linkedDirs.Add(new Dir(key), new Dir(pathDirs[key]));
-                }
-
             }
 
-            if (linkedDirs.Count > 0)
+            if (pathDirs.Count > 0)
             {
-                foreach (var key in linkedDirs.Keys)
+                foreach (var key in pathDirs.Keys)
                 {
-                    ActionsOnDIrAndFiles.MainCompareAction(key, linkedDirs[key]);
-                    ActionsOnDIrAndFiles.MainCompareAction(linkedDirs[key], key);
+                    ActionsOnDIrAndFiles.MainCompareAction(new Dir(key), new Dir(pathDirs[key]));
+                    ActionsOnDIrAndFiles.MainCompareAction(new Dir(pathDirs[key]), new Dir(key));
                 }
             }
             
